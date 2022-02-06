@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Episodio;
+use App\Events\NovaSerie;
 use App\Http\Requests\SeriesFormRequest;
 use App\Serie;
 use App\Services\CriadorDeSerie;
 use App\Services\RemovedorDeSerie;
 use App\Temporada;
+use App\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -32,11 +34,27 @@ class SeriesController extends Controller
         SeriesFormRequest $request,
         CriadorDeSerie $criadorDeSerie
     ) {
+
+        $capa = null;
+        if($request->hasFile('capa'))
+        {
+            $capa = $request->file('capa')->store('serie');
+        }
+
         $serie = $criadorDeSerie->criarSerie(
+            $request->nome,
+            $request->qtd_temporadas,
+            $request->ep_por_temporada,
+            $capa
+        );
+
+        $eventoNovaSerie = new NovaSerie(
             $request->nome,
             $request->qtd_temporadas,
             $request->ep_por_temporada
         );
+
+        event($eventoNovaSerie);
 
         $request->session()
             ->flash(

@@ -1,9 +1,9 @@
 <?php
 namespace App\Services;
 
-use App\{Serie, Temporada, Episodio};
+use App\{Events\SerieApagada, Jobs\ExcluirCapaSerie, Serie, Temporada, Episodio};
 use Illuminate\Support\Facades\DB;
-
+use Storage;
 class RemovedorDeSerie
 {
     public function removerSerie(int $serieId): string
@@ -11,10 +11,15 @@ class RemovedorDeSerie
         $nomeSerie = '';
         DB::transaction(function () use ($serieId, &$nomeSerie) {
             $serie = Serie::find($serieId);
+            $serieObj = (object) $serie->toArray();
             $nomeSerie = $serie->nome;
 
             $this->removerTemporadas($serie);
             $serie->delete();
+
+            $evento = new SerieApagada($serieObj);
+            event($evento);
+            ExcluirCapaSerie::dispatch($serieObj);
         });
 
         return $nomeSerie;
